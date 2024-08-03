@@ -9,3 +9,9 @@ this mod is designed so that people can sing along to songs inside SCP: Secret L
 You can use ANY song that has synced lyrics on Deezer or time them yourself and load them from local storage!
 
 ## Commands
+
+
+## Thanks
+
+this project uses a brilliant library by AlexanderDotH called [devbase](https://github.com/AlexanderDotH/DevBase) for everything deezer
+i also use [LrcLib](https://lrclib.net/) when i need to 

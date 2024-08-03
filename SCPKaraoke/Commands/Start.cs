@@ -1,15 +1,11 @@
 using CommandSystem;
 using System;
-using System.Collections.Generic;
-using CentralAuth;
-using UnityEngine;
-using Mirror;
-using PlayerRoles;
+using System.IO;
+using System.Threading.Tasks;
 using PluginAPI.Core;
-using PluginAPI.Events;
-using SCPKaraoke.LRCParser;
-using SCPSLAudioApi.AudioCore;
-using VoiceChat;
+using SCPKaraoke.DeezerDL;
+using Log = PluginAPI.Core.Log;
+
 
 namespace SCPKaraoke.Commands
 {
@@ -21,60 +17,71 @@ public class Start : ICommand
     public string[] Aliases { get; } = new string[] { "s",};
 
     public string Description { get; } = "Test command.";
-
+    
     public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
     {
-        ReferenceHub audioBot = SpawnBot("Balls");
-        AudioPlayerBase audioPlayer = AudioPlayerBase.Get(audioBot);
-        response = "Success on Spawn, attempting to play audio source";
-        audioPlayer.BroadcastChannel = VoiceChatChannel.RoundSummary;
-        audioPlayer.AllowUrl = true;
-        audioPlayer.CurrentPlay = "url";
-        // next load lyrics
-        LrcParser lrc = new LrcParser("/mnt/2E9808EC7E84BBD8/deemix/Mckenna Grace - Checkered Vans.lrc");
-        //i just send all the lyrics at once and tell the game to never clear the broadcast lists
-        // its scuffed. dosent consider for other plugins which do clear the list and never will allow for stopping 
-        // but GOD its beautiful and works somehow
-        // THIS WILL BE REFACTORED HOLY FUCK
-        for (int i = 0; i < lrc.GetNumberOfLyrics(); i++)
+        string Songs = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath), "songs");
+        
+        uint songID = Convert.ToUInt32(arguments.At(0));
+        if (arguments.At(0) == null)
         {
-            broadCastlul(lrc.GetLyricFromNumber(i)[1],2);
+            response = "No song id!";
+            return true;
         }
-    
-        audioPlayer.Play(-1);
+        Log.Warning(songID.ToString());
+        Task.Run(async () => {       var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerARL);
+            var info =  await deezerClient.GetInfo(songID);
+            await deezerClient.DownloadSong(songID,Songs);
+            await new ffmpeg().ConvertToOgg(Path.Combine(Songs,"out.mp3"),Path.Combine(Songs, "out.ogg"));
+            var lrclib = new LrcLibLyrics();
+            await lrclib.DownloadLyrics(info[3].ToString() ,info[5].ToString(),info[6].ToString(),Path.Combine(Songs,"lyrics.lrc"),info[4].ToString());}).Wait();
+        
+        
+        
+        // next load lyrics
+        // //i just send all the lyrics at once and tell the game to never clear the broadcast lists
+        // // its scuffed. doesn't consider for other plugins which do clear the list and never will allow for stopping 
+        // // but GOD its beautiful and works somehow
+        // // THIS WILL BE REFACTORED HOLY FUCK
+        // for (int i = 0; i < lrc.GetNumberOfLyrics(); i++)
+        // {
+        //     broadCastlul(lrc.GetLyricFromNumber(i)[1],2);
+        // }
+        KaraokeSync krc = new KaraokeSync(Path.Combine(Songs,"lyrics.lrc"),Path.Combine(Songs, "out.ogg"));
+        krc.StartSongAndLyrics();
+        response = "song has started!";
         return true;
     }
 
-    public void broadCastlul(string bc, int duration)
-    {
-        foreach (var p in Player.GetPlayers())
-            if (p.Role != RoleTypeId.None)
-                p.SendBroadcast(bc,(ushort)duration, shouldClearPrevious: false);
-        return;
-    }
-    
-    
-    private ReferenceHub SpawnBot(string name)
-    {
-        GameObject clone = UnityEngine.Object.Instantiate(NetworkManager.singleton.playerPrefab);
-        ReferenceHub hub = clone.GetComponent<ReferenceHub>();
+    // private async Task DownloadSongandLyrics(uint songID)
+    // {
+    //     var deezerClient = new DeezerAPI(Config.DeezerARL);
+    //     var info =  await deezerClient.GetInfo(songID);
+    //     await deezerClient.DownloadSong(songID);
+    //     var lrclib = new LrcLibLyrics();
+    //     await lrclib.DownloadLyrics(info[3].ToString() ,info[5].ToString(),info[6].ToString(),info[4].ToString());
+    // }
+    // private ReferenceHub SpawnBot(string name)
+    // {
+    //     var newPlayer = Object.Instantiate(NetworkManager.singleton.playerPrefab);
+    //     var fakeconnection = new FakeNetworkConnection(0);
+    //     var hub = newPlayer.GetComponent<ReferenceHub>();
+    //     NetworkServer.AddPlayerForConnection(fakeconnection, newPlayer);
+    //     hub.authManager.InstanceMode = ClientInstanceMode.Host;
+    //
+    //     try
+    //     {
+    //         hub.nicknameSync.SetNick(name);
+    //     }
+    //     catch (Exception)
+    //     {
+    //     }
+    //
+    //     return hub;
+    // }
 
-        NetworkServer.AddPlayerForConnection(new FakeNetworkConnection(hub.PlayerId), clone);
-        hub.nicknameSync.MyNick = name;
-        PlayerAuthenticationManager authManager = hub.authManager;
-        try
-        {
-            authManager.UserId = $"{name}@KaraokeBot";
-        }
-        catch
-        {
-            // Ignored kekw
-        }
-        authManager._targetInstanceMode = ClientInstanceMode.Host;
-        hub.roleManager.ServerSetRole(RoleTypeId.Overwatch, RoleChangeReason.RemoteAdmin);
-        Player.PlayersUserIds.Add(name, hub);
-        EventManager.ExecuteEvent(new PlayerJoinedEvent(hub));
-        return hub;
-    }
 }
+
+
+
 }

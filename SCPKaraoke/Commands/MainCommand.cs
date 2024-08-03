@@ -1,7 +1,6 @@
 using PluginAPI.Core;
 using CommandSystem;
 using System;
-using PluginAPI.Events;
 
 namespace SCPKaraoke.Commands
 {

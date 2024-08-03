@@ -1,4 +1,6 @@
-﻿using PluginAPI.Core;
+﻿using System.IO;
+using System.Threading.Tasks;
+using PluginAPI.Core;
 using SCPSLAudioApi;
 using PluginAPI.Core.Attributes;
 
@@ -17,11 +19,24 @@ namespace SCPKaraoke
         void LoadPlugin()
         {
             Singleton = this;
-
+            
             if (!Config.IsEnabled)
                 return;
             Startup.SetupDependencies();
             PluginAPI.Events.EventManager.RegisterEvents(this);
+            Log.Info("Making directory!");
+            Log.Info("Making directory!");
+            var directory = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath),
+                "songs");
+            Log.Info(directory);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            Log.Info("Getting FFMPEG");
+            Task.Run(async () => await new ffmpeg().DownloadFFMPEG(Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath), "ffmpeg"))).Wait();
+            Log.Info("Got FFMPEG!");
+
             Log.Warning($"SCPKaraoke {Version} is ready for people to sing in!");
         }
     }

@@ -4,6 +4,7 @@ parse .lrc *
 
 broadcast them * BUT PLEASE REFACTOR ITS TERRIBLE
 
-sync stream with lyrics
+sync stream with lyrics *
 
-refactor to make more user friendly
+refactor to make more user friendly *
+
