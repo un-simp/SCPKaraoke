@@ -13,5 +13,5 @@ You can use ANY song that has synced lyrics on Deezer or time them yourself and 
 
 ## Thanks
 
-this project uses a brilliant library by AlexanderDotH called [devbase](https://github.com/AlexanderDotH/DevBase) for everything deezer
-i also use [LrcLib](https://lrclib.net/) when i need to 
+i use [LrcLib](https://lrclib.net/) when i need to 
+and thanks to deezer ig idk
