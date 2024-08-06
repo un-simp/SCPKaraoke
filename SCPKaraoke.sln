@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SCPKaraoke", "SCPKaraoke\SCPKaraoke.csproj", "{DF9ED20B-5B4A-4080-B063-F1AC17696957}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeezerDL", "DeezerDL\DeezerDL.csproj", "{B82B854D-9EC3-488E-8D44-5A92025C84E7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{DF9ED20B-5B4A-4080-B063-F1AC17696957}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF9ED20B-5B4A-4080-B063-F1AC17696957}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF9ED20B-5B4A-4080-B063-F1AC17696957}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B82B854D-9EC3-488E-8D44-5A92025C84E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B82B854D-9EC3-488E-8D44-5A92025C84E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B82B854D-9EC3-488E-8D44-5A92025C84E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B82B854D-9EC3-488E-8D44-5A92025C84E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

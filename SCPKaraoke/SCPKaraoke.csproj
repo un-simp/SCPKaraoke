@@ -37,9 +37,6 @@
         <Reference Include="Assembly-CSharp">
           <HintPath>References\Assembly-CSharp-Publicized.dll</HintPath>
         </Reference>
-        <Reference Include="BouncyCastle.Cryptography, Version=2.0.0.0, Culture=neutral, PublicKeyToken=072edcf4a5328938, processorArchitecture=MSIL">
-          <HintPath>..\packages\BouncyCastle.Cryptography.2.4.0\lib\net461\BouncyCastle.Cryptography.dll</HintPath>
-        </Reference>
         <Reference Include="CommandSystem.Core">
           <HintPath>References\CommandSystem.Core.dll</HintPath>
         </Reference>
@@ -50,9 +47,7 @@
           <HintPath>References\Mirror-Publicized.dll</HintPath>
         </Reference>
         <Reference Include="mscorlib" />
-        <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-          <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-        </Reference>
+
         <Reference Include="NorthwoodLib">
           <HintPath>References\NorthwoodLib.dll</HintPath>
         </Reference>
@@ -88,11 +83,10 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Commands\MainCommand.cs" />
+        <Compile Include="Commands\OptOut.cs" />
         <Compile Include="Commands\Start.cs" />
+        <Compile Include="Commands\Stop.cs" />
         <Compile Include="Config.cs" />
-        <Compile Include="DeezerDL\DeezerAPI.cs" />
-        <Compile Include="DeezerDL\DeezerDRM.cs" />
-        <Compile Include="DeezerDL\LrcLibLyrics.cs" />
         <Compile Include="FakeNetworkConnection.cs" />
         <Compile Include="ffmpeg.cs" />
         <Compile Include="KaraokeSync.cs" />
@@ -102,6 +96,15 @@
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="DeezerDL\" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\DeezerDL\DeezerDL.csproj">
+        <Project>{b82b854d-9ec3-488e-8d44-5a92025c84e7}</Project>
+        <Name>DeezerDL</Name>
+      </ProjectReference>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

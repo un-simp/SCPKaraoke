@@ -10,7 +10,7 @@ using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Security;
 
-namespace SCPKaraoke.DeezerDL
+namespace DeezerDL
 {
     public class DeezerDRM
     {

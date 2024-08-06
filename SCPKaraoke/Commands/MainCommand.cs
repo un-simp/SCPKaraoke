@@ -5,18 +5,18 @@ using System;
 namespace SCPKaraoke.Commands
 {
     [CommandHandler(typeof(RemoteAdminCommandHandler))]
-    [CommandHandler(typeof(GameConsoleCommandHandler))]
     public class MainCommand : ParentCommand
     {
         public override string Command => "karaoke";
         public override string Description => "Main command for SCP Karaoke";
-        public override string[] Aliases => new string[] { };
+        public override string[] Aliases => new string[] {"kar"};
 
         public override void LoadGeneratedCommands()
         {
             try
             {
                 RegisterCommand(new Start());
+                RegisterCommand(new Stop());
             }
             catch (Exception e)
             {

@@ -1,11 +1,11 @@
 using CommandSystem;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using DeezerDL;
 using PluginAPI.Core;
-using SCPKaraoke.DeezerDL;
 using Log = PluginAPI.Core.Log;
-
 
 namespace SCPKaraoke.Commands
 {
@@ -17,27 +17,33 @@ public class Start : ICommand
     public string[] Aliases { get; } = new string[] { "s",};
 
     public string Description { get; } = "Test command.";
-    
+    private List<Object> songInfo;
+
+
     public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
     {
-        string Songs = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath), "songs");
-        
+        string songs = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath)!,
+            "songs");
+
         uint songID = Convert.ToUInt32(arguments.At(0));
         if (arguments.At(0) == null)
         {
             response = "No song id!";
             return true;
         }
+
         Log.Warning(songID.ToString());
-        Task.Run(async () => {       var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerARL);
-            var info =  await deezerClient.GetInfo(songID);
-            await deezerClient.DownloadSong(songID,Songs);
-            await new ffmpeg().ConvertToOgg(Path.Combine(Songs,"out.mp3"),Path.Combine(Songs, "out.ogg"));
-            var lrclib = new LrcLibLyrics();
-            await lrclib.DownloadLyrics(info[3].ToString() ,info[5].ToString(),info[6].ToString(),Path.Combine(Songs,"lyrics.lrc"),info[4].ToString());}).Wait();
-        
-        
-        
+        Task.Run(async () =>
+        {
+            var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerARL);
+            songInfo = await deezerClient.GetInfo(songID);
+            await deezerClient.DownloadSong(songID, Path.Combine(songs, "out.mp3"), songInfo);
+            await new ffmpeg().ConvertToOgg(Path.Combine(songs, "out.mp3"), Path.Combine(songs, "out.ogg"));
+            await deezerClient.DownloadLyrics(songID, Path.Combine(songs, "lyrics.lrc"));
+        }).Wait();
+
+
+
         // next load lyrics
         // //i just send all the lyrics at once and tell the game to never clear the broadcast lists
         // // its scuffed. doesn't consider for other plugins which do clear the list and never will allow for stopping 
@@ -47,11 +53,13 @@ public class Start : ICommand
         // {
         //     broadCastlul(lrc.GetLyricFromNumber(i)[1],2);
         // }
-        KaraokeSync krc = new KaraokeSync(Path.Combine(Songs,"lyrics.lrc"),Path.Combine(Songs, "out.ogg"));
-        krc.StartSongAndLyrics();
+        KaraokeSync krc = new KaraokeSync(Path.Combine(songs, "lyrics.lrc"), Path.Combine(songs, "out.ogg"),songInfo[3].ToString(), songInfo[5].ToString());
+        // krc.StartSongAndLyrics();
+        krc.AnnounceSongThenPlay(10);
         response = "song has started!";
         return true;
     }
+
 
     // private async Task DownloadSongandLyrics(uint songID)
     // {

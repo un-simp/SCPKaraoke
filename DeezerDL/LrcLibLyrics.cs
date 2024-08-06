@@ -5,9 +5,9 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace SCPKaraoke.DeezerDL
+namespace DeezerDL
 {
-    // interacts with LRCLIB to get synced lyrics if deezer fails (or right now the only source i cant fucking deal with deezer's api anymore)
+    // interacts with LRCLIB to get synced lyrics if deezer fails
     public class LrcLibLyrics
     {
         private readonly HttpClient _client;
@@ -22,6 +22,7 @@ namespace SCPKaraoke.DeezerDL
                 { "Origin", "https://www.lrclib.net" },
                 { "Accept-Encoding", "gzip, deflate, br" },
                 { "Accept-Language", "en-US,en;q=0.9" },
+                // we make a new httpclient cause of this shit :)
                 {
                     "User-Agent",
                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36 SCPKaraoke/0.0.1"
@@ -36,6 +37,8 @@ namespace SCPKaraoke.DeezerDL
             {
                 _client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
             }
+            _client.Timeout = TimeSpan.FromSeconds(30);
+
         }
 
         /// <summary>
@@ -45,7 +48,7 @@ namespace SCPKaraoke.DeezerDL
         /// <param name="songArtist"> the performing artist</param>
         /// <param name="duration">length of song in seconds</param>
         /// <param name="songAlbum">the album its from (nullable will use the song name)</param>
-        public async Task DownloadLyrics(string songName, string songArtist, string duration,string outPath, string songAlbum = null)
+        public async Task DownloadLyrics(string songName, string songArtist, string duration, string path, string songAlbum = null)
         {
             string baseUrl;
             switch (songAlbum)
@@ -62,7 +65,16 @@ namespace SCPKaraoke.DeezerDL
 
             Console.WriteLine(baseUrl);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, baseUrl);
-            var response = await Client.SendAsync(request);
+            HttpResponseMessage response;
+            try
+            {
+                response = await Client.SendAsync(request);
+            }
+            catch (Exception e)
+            {
+                throw new LrcClientException($"LRCLIB took too long to respond! Error is: {e}");
+            }
+            
             
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -71,7 +83,7 @@ namespace SCPKaraoke.DeezerDL
             response.EnsureSuccessStatusCode();
             string lyrics = await response.Content.ReadAsStringAsync();
             LyricsInfo lyricsInfo = JsonConvert.DeserializeObject<LyricsInfo>(lyrics);
-            File.WriteAllText(outPath,lyricsInfo.SyncedLyrics);
+            File.WriteAllText(path,lyricsInfo.SyncedLyrics);
         }
     }
 

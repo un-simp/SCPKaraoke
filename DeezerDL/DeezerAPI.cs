@@ -6,14 +6,15 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using PluginAPI.Core;
 
-namespace SCPKaraoke.DeezerDL
+namespace DeezerDL
 {
     public class DeezerAPI
     {
         private readonly DeezerDRM _deezerDrm;
         private readonly HttpClient _client;
+        private readonly CookieContainer _cookieContainer;
+        private string _arl;
 
         public class SongData
         {
@@ -58,13 +59,19 @@ namespace SCPKaraoke.DeezerDL
 
         public DeezerAPI(string arl)
         {
-            HttpClientHandler handler = new HttpClientHandler();
-            CookieContainer cookieContainer = new CookieContainer();
-            _client = new HttpClient(handler);
+            _cookieContainer = new CookieContainer();
             _deezerDrm = new DeezerDRM();
-            handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-            handler.CookieContainer = cookieContainer;
-            // Set up headers
+            _arl = arl;
+            _cookieContainer = new CookieContainer();
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                CookieContainer = _cookieContainer
+            };
+        
+            _client = new HttpClient(handler);
+            _client.Timeout = TimeSpan.FromSeconds(30);
+
             var headers = new Dictionary<string, string>
             {
                 { "Pragma", "no-cache" },
@@ -78,22 +85,17 @@ namespace SCPKaraoke.DeezerDL
                 { "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8" },
                 { "Accept", "*/*" },
                 { "Cache-Control", "no-cache" },
-                // { "X-Requested-With", "XMLHttpRequest" },
                 { "Connection", "keep-alive" },
-                { "Referer", "https://www.deezer.com/login" },
                 { "DNT", "1" }
             };
-
             foreach (var header in headers)
             {
                 _client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
             }
 
 
-            cookieContainer.Add(new Uri("https://www.deezer.com"),
-                new Cookie("arl",
-                    $"{arl}"));
-            cookieContainer.Add(new Uri("https://www.deezer.com"), new Cookie("comeback", "1"));
+            _cookieContainer.Add(new Cookie("arl", arl, "/", "deezer.com"));
+            _cookieContainer.Add(new Cookie("comeback", "1", "/", "deezer.com"));
 
         }
 
@@ -108,7 +110,6 @@ namespace SCPKaraoke.DeezerDL
         public async Task<List<object>> GetInfo(uint songid)
         {
             string url = $"https://www.deezer.com/en/track/{songid.ToString()}";
-            Log.Warning(url);
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await Client.SendAsync(request);
             response.EnsureSuccessStatusCode();
@@ -120,8 +121,7 @@ namespace SCPKaraoke.DeezerDL
             if (match.Success)
             {
                 // Extract the JSON data from the <script> tag
-                string jsonData = match.Value;
-                Console.WriteLine(jsonData);
+                string jsonData = match.Value; 
                 Root root = JsonConvert.DeserializeObject<Root>(jsonData);
                 if (root.Data.Md5Origin == null)
                 {
@@ -135,7 +135,7 @@ namespace SCPKaraoke.DeezerDL
                 "Could not find object for songData, make sure you are able to access deezer.com");
         }
         private DeezerDRM DRM => _deezerDrm;
-        public async Task DownloadSong(uint songId, string outPath, List<Object> songInfo = null)
+        public async Task DownloadSong(uint songId,string path, List<Object> songInfo = null)
         {
             List<object> songData;
             if (songInfo == null)
@@ -149,13 +149,12 @@ namespace SCPKaraoke.DeezerDL
             }
             string bfKey = DRM.CalcBlowfish(songId);
             string url = DRM.GenUrLdata(songId, songData[0] as string, (int)songData[1], (int)songData[2]);
-            Console.Write(url);
-            await DownloadAudio(url, bfKey,outPath);
+            await DownloadAudio(url, bfKey,path);
         }
 
-        private async Task DownloadAudio(string url, string key, string outPath)
+        private async Task DownloadAudio(string url, string key,string path)
         {
-            var file = File.OpenWrite(Path.Combine(outPath,"out.mp3"));
+            var file = File.OpenWrite(path);
             int currentBlock = 0; // what block we are on rn
             using HttpResponseMessage response = await Client.GetAsync(url);
             response.EnsureSuccessStatusCode();
@@ -173,6 +172,38 @@ namespace SCPKaraoke.DeezerDL
             }
         }
 
+        public  async Task DownloadLyrics(uint songId,string path)
+        {
+            try
+            {
+                await DownloadLyricsDeezer(songId,path);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                try
+                {
+                    await DownloadLyricsLrcLib(songId,path);
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception.Message);
+                }
+            }
+
+         
+        }
+        private async Task DownloadLyricsDeezer(uint songId, string path)
+        {
+            DeezerLyrics lyrics = new DeezerLyrics(Client);
+            await lyrics.DownloadLyrics(songId,path);
+        }
+        private async Task DownloadLyricsLrcLib(uint songId,string path)
+        {
+            LrcLibLyrics lyrics = new LrcLibLyrics();
+            var info = await GetInfo(songId);
+            await lyrics.DownloadLyrics(info[3].ToString() ,info[5].ToString(),info[6].ToString(),path,info[4].ToString());
+        }
     }
 }
 public class DeezerClientException : Exception
