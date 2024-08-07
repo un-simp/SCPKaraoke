@@ -16,8 +16,9 @@ public class Start : ICommand
 
     public string[] Aliases { get; } = new string[] { "s",};
 
-    public string Description { get; } = "Test command.";
-    private List<Object> songInfo;
+    public string Description { get; } = "Starts karaoke, needs a song id.";
+    private List<Object> _songInfo;
+    private bool _ifSameChannel;
 
 
     public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
@@ -32,13 +33,23 @@ public class Start : ICommand
             return true;
         }
 
+        try
+        {
+            _ifSameChannel = Convert.ToBoolean(arguments.At(1));
+        }
+        catch (Exception)
+        {
+            _ifSameChannel = false;
+        }
+        
+
         Log.Warning(songID.ToString());
         Task.Run(async () =>
         {
             var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerARL);
-            songInfo = await deezerClient.GetInfo(songID);
-            await deezerClient.DownloadSong(songID, Path.Combine(songs, "out.mp3"), songInfo);
-            await new ffmpeg().ConvertToOgg(Path.Combine(songs, "out.mp3"), Path.Combine(songs, "out.ogg"));
+            _songInfo = await deezerClient.GetInfo(songID);
+            await deezerClient.DownloadSong(songID, Path.Combine(songs, "out.mp3"), _songInfo);
+            await new Ffmpeg().ConvertToOgg(Path.Combine(songs, "out.mp3"), Path.Combine(songs, "out.ogg"));
             await deezerClient.DownloadLyrics(songID, Path.Combine(songs, "lyrics.lrc"));
         }).Wait();
 
@@ -53,9 +64,9 @@ public class Start : ICommand
         // {
         //     broadCastlul(lrc.GetLyricFromNumber(i)[1],2);
         // }
-        KaraokeSync krc = new KaraokeSync(Path.Combine(songs, "lyrics.lrc"), Path.Combine(songs, "out.ogg"),songInfo[3].ToString(), songInfo[5].ToString());
-        // krc.StartSongAndLyrics();
-        krc.AnnounceSongThenPlay(10);
+        KaraokeSync krc = new KaraokeSync(Path.Combine(songs, "lyrics.lrc"), Path.Combine(songs, "out.ogg"),_songInfo[3].ToString(), _songInfo[5].ToString(),_ifSameChannel);
+        krc.StartSongAndLyrics();
+        // krc.AnnounceSongThenPlay(10);
         response = "song has started!";
         return true;
     }

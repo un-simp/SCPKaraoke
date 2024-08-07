@@ -9,9 +9,9 @@ namespace SCPKaraoke.Commands
     {
         public override string Command => "karaoke";
         public override string Description => "Main command for SCP Karaoke";
-        public override string[] Aliases => new string[] {"kar"};
+        public override string[] Aliases => new[] {"kar"};
 
-        public override void LoadGeneratedCommands()
+        public sealed override void LoadGeneratedCommands()
         {
             try
             {

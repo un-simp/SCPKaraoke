@@ -5,9 +5,9 @@ using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
 namespace SCPKaraoke
 {
-    public class ffmpeg
+    public class Ffmpeg
     {
-        public async Task DownloadFFMPEG(string ffmpegPath)
+        public async Task DownloadFfmpeg(string ffmpegPath)
         {
             DirectoryInfo ffmpeg = Directory.CreateDirectory(ffmpegPath);
             await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official,ffmpegPath);

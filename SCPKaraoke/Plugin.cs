@@ -26,7 +26,7 @@ namespace SCPKaraoke
             PluginAPI.Events.EventManager.RegisterEvents(this);
             Log.Info("Making directory!");
             Log.Info("Making directory!");
-            var directory = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath),
+            var directory = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath)!,
                 "songs");
             Log.Info(directory);
             if (!Directory.Exists(directory))
@@ -34,7 +34,7 @@ namespace SCPKaraoke
                 Directory.CreateDirectory(directory);
             }
             Log.Info("Getting FFMPEG");
-            Task.Run(async () => await new ffmpeg().DownloadFFMPEG(Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath), "ffmpeg"))).Wait();
+            Task.Run(async () => await new Ffmpeg().DownloadFfmpeg(Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath)!, "ffmpeg"))).Wait();
             Log.Info("Got FFMPEG!");
 
             Log.Warning($"SCPKaraoke {Version} is ready for people to sing in!");

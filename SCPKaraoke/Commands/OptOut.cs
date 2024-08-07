@@ -1,5 +1,7 @@
 using System;
 using CommandSystem;
+using PluginAPI.Core;
+
 namespace SCPKaraoke.Commands
 {
     [CommandHandler(typeof(ClientCommandHandler))]
@@ -13,7 +15,16 @@ namespace SCPKaraoke.Commands
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
-            response = "you opted out of karaoke";
+            try
+            {
+                KaraokeSync.Current.Participators.RemoveAll(player => player.Equals(Player.Get(sender).PlayerId));
+                response = "you opted out of karaoke";
+            }
+            catch (NullReferenceException)
+            {
+                response = "no karaoke is happening rn";
+            }
+
             return true;
         }
 

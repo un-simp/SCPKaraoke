@@ -20,52 +20,62 @@ namespace SCPKaraoke
     {
         private readonly LrcParser _lrc;
         private readonly AudioPlayerBase _audiosource;
-        private List<System.Object> _botList;
-        private ReferenceHub _bot;
-        private string _botName;
+        private readonly ReferenceHub _bot;
         private int _nextLyric;
-        private string _lrcPath;
-        private string _songPath;
-        private string _songName;
+        private readonly string _lrcPath;
+        private readonly string _songPath;
+        private readonly string _songName;
+        public readonly List<int> Participators = new List<int>();
+        private readonly bool _ifSameChannel;
 
-        private string _songArtist;
+        private readonly string _songArtist;
         // hopefully only one instance is made crossing fingers if not god is dead
         public static KaraokeSync Current { get; private set; }
 
 
         
         
-        public KaraokeSync(string LRCPath, string songPath,string songName, string songArtist)
+        public KaraokeSync(string lrcPath, string songPath,string songName, string songArtist,bool ifSameChannel)
         {
-            _lrc = new LrcParser(LRCPath);
-            _lrcPath = LRCPath;
+            _lrc = new LrcParser(lrcPath);
+            _lrcPath = lrcPath;
             _songPath = songPath;
             _songArtist = songArtist;
             _songName = songName;
-            _botList = SpawnBot($"{_songName} - {songArtist}");
-            _bot = _botList[1] as ReferenceHub;
-            _botName = _botList[0] as string;
+            List<System.Object> botList = SpawnBot($"{_songName} - {songArtist}");
+            _bot = botList[1] as ReferenceHub;
+            string botName = botList[0] as string;
             _audiosource  = AudioPlayerBase.Get(_bot);
             _audiosource.CurrentPlay = songPath;
             Current = this;
+            foreach (var p in Player.GetPlayers())
+            {
+                Participators.Add(p.PlayerId);
+            }
+
+            _ifSameChannel = ifSameChannel;
         }
 
-                [PluginEvent(ServerEventType.RoundEnd)]
+        [PluginEvent(ServerEventType.RoundEnd)]
         private void EndPrematurely()
         {
             EndSong();
-            broadCastlul("The song has ended prematurely due to a round end event", 10);
+            BroadCastlul("The song has ended prematurely due to a round end event", 10);
         }
 
         private AudioPlayerBase AudioPlayer => _audiosource;
 
-        public  void AnnounceSongThenPlay(int timeToStart)
+        public void AnnounceSongThenPlay(int timeToStart,Player playerExecuted)
         {
             Log.Info(_songPath);
             Log.Info(_lrcPath);
             Cassie.Clear();
             Cassie.Message("10 seconds");
-            broadCastlul($"<b><size=32>Karaoke for {_songName} by {_songArtist} will start in {timeToStart.ToString()} seconds! \n Open your Console and type \".karaoke optout\" to opt out.",timeToStart);
+            BroadCastlul(
+                _ifSameChannel
+                    ? $"<b><size=20>Karaoke for {_songName} by {_songArtist} will start in {timeToStart.ToString()} seconds! \n Open your Console and type \".karaoke optout\" to opt out.\n You'll all be in the same channel, blame {playerExecuted.Nickname}"
+                    : $"<b><size=32>Karaoke for {_songName} by {_songArtist} will start in {timeToStart.ToString()} seconds! \n Open your Console and type \".karaoke optout\" to opt out.",
+                timeToStart);
             Timer timer = new Timer(timeToStart *1000);
             timer.AutoReset = false;
             timer.Elapsed += TimerOnElapsed;
@@ -82,6 +92,16 @@ namespace SCPKaraoke
             // subscribe to update thread so our other code isnt running all the fucking time and only after this has been run
             StaticUnityMethods.OnUpdate += StaticUnityMethodsOnOnUpdate;
             _nextLyric = 0;
+            AudioPlayer.BroadcastTo = Participators;
+            if (_ifSameChannel)
+            {
+                foreach (var playerId in Participators)
+                {
+                    Player player = Player.Get(playerId);
+                    player.VoiceModule.CurrentChannel = VoiceChatChannel.RoundSummary;
+                }
+            }
+
             AudioPlayer.BroadcastChannel = VoiceChatChannel.RoundSummary;
             AudioPlayer.AllowUrl = false;
             AudioPlayer.LogDebug = true;
@@ -105,9 +125,22 @@ namespace SCPKaraoke
                 AudioPlayer.Stoptrack(true);
                 // EventManager.ExecuteEvent(new PlayerLeftEvent(_bot));
                 // Player.PlayersUserIds.Remove();
-                NetworkServer.RemovePlayerForConnection(_bot.netIdentity.connectionToClient, true);
+                NetworkConnectionToClient conn = _bot.connectionToClient;
+                if (_bot._playerId.Value <= RecyclablePlayerId._autoIncrement)
+                    _bot._playerId.Destroy();
+                _bot.OnDestroy();
+                CustomNetworkManager.TypedSingleton.OnServerDisconnect(conn);
+                // NetworkServer.RemovePlayerForConnection(_bot.netIdentity.connectionToClient, true);
                 File.Delete(_lrcPath);
                 File.Delete(_songPath);
+                if (_ifSameChannel)
+                {
+                    foreach (var playerId in Participators)
+                    {
+                        Player player = Player.Get(playerId);
+                        player.VoiceModule.CurrentChannel = player.VoiceModule._lastChannel;
+                    }
+                }
                 return "Song Stopped!";
             
         }
@@ -122,7 +155,7 @@ namespace SCPKaraoke
             double totalSeconds = minutes * 60 + seconds + milliseconds / 100.0;
             if (currentTime >= totalSeconds)
             {
-                broadCastlul(_lrc.GetLyricFromNumber(_nextLyric)[1], 8);
+                BroadCastlul(_lrc.GetLyricFromNumber(_nextLyric)[1], 8);
                 _nextLyric++;
             }
 
@@ -139,15 +172,15 @@ namespace SCPKaraoke
             float seconds = writeHead / samplesPerSecond;
             return seconds;
         }
-        
-        public void broadCastlul(string bc, int duration)
+
+        private void BroadCastlul(string bc, int duration)
         {
             foreach (var p in Player.GetPlayers())
                 if (p.Role != RoleTypeId.None)
                     p.SendBroadcast(bc,(ushort)duration, shouldClearPrevious: true);
         }
         
-        
+       
         private List<System.Object> SpawnBot(string name)
         {
             GameObject clone = Object.Instantiate(NetworkManager.singleton.playerPrefab);
@@ -170,6 +203,7 @@ namespace SCPKaraoke
             EventManager.ExecuteEvent(new PlayerJoinedEvent(hub));
             return new List<System.Object> {name, hub};
         }
+    
     }
    
 }
