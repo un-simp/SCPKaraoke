@@ -10,7 +10,8 @@ You can use ANY song that has synced lyrics on Deezer or time them yourself and 
 
 ## Commands
 
-
+## Building
+like any project however since i sign my builds you will probably need to supply your own/ disable it
 ## Thanks
 
 i use [LrcLib](https://lrclib.net/) when i need to 
