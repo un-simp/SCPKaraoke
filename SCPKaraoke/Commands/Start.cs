@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using DeezerDL;
-using PluginAPI.Core;
-using Log = PluginAPI.Core.Log;
+using Exiled.API.Features;
+using MEC;
 
 namespace SCPKaraoke.Commands
 {
@@ -14,7 +14,7 @@ public class Start : ICommand
 {
     public string Command { get; } = "start";
 
-    public string[] Aliases { get; } = new string[] { "s",};
+    public string[] Aliases { get; } = { "s",};
 
     public string Description { get; } = "Starts karaoke, needs a song id.";
     private List<Object> _songInfo;
@@ -23,7 +23,7 @@ public class Start : ICommand
 
     public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
     {
-        string songs = Path.Combine(Path.GetDirectoryName(PluginHandler.Get(Plugin.Singleton).MainConfigPath)!,
+        string songs = Path.Combine(Path.GetDirectoryName(Plugin.Singleton.ConfigPath)!,
             "songs");
 
         uint songID = Convert.ToUInt32(arguments.At(0));
@@ -43,19 +43,12 @@ public class Start : ICommand
         }
         
 
-        Log.Warning(songID.ToString());
-        Task.Run(async () =>
-        {
-            var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerARL);
-            _songInfo = await deezerClient.GetInfo(songID);
-            await deezerClient.DownloadSong(songID, Path.Combine(songs, "out.mp3"), _songInfo);
-            await new Ffmpeg().ConvertToOgg(Path.Combine(songs, "out.mp3"), Path.Combine(songs, "out.ogg"));
-            await deezerClient.DownloadLyrics(songID, Path.Combine(songs, "lyrics.lrc"));
-        }).Wait();
-
-
+        Log.Info(songID.ToString());
+        Timing.RunCoroutine(DownloadAndConvertSongAsync(songID,songs));
+        
 
         // next load lyrics
+        // im leaving this in cause its really fucking funny
         // //i just send all the lyrics at once and tell the game to never clear the broadcast lists
         // // its scuffed. doesn't consider for other plugins which do clear the list and never will allow for stopping 
         // // but GOD its beautiful and works somehow
@@ -65,42 +58,36 @@ public class Start : ICommand
         //     broadCastlul(lrc.GetLyricFromNumber(i)[1],2);
         // }
         KaraokeSync krc = new KaraokeSync(Path.Combine(songs, "lyrics.lrc"), Path.Combine(songs, "out.ogg"),_songInfo[3].ToString(), _songInfo[5].ToString(),_ifSameChannel);
-        krc.StartSongAndLyrics();
-        // krc.AnnounceSongThenPlay(10);
+        krc.AnnounceSongThenPlay(10, Player.Get(sender));
         response = "song has started!";
         return true;
     }
 
+    private IEnumerator<float> DownloadAndConvertSongAsync(uint songID, string songs)
+    {
+        
+        var task = Task.Run(async () =>
+        {
+            var deezerClient = new DeezerAPI(Plugin.Singleton.Config.DeezerArl);
+            _songInfo = await deezerClient.GetInfo(songID);
+            await deezerClient.DownloadSong(songID, Path.Combine(songs, "out.mp3"), _songInfo);
+            Timing.RunCoroutine(new Ffmpeg().ConvertToOggCoroutine(Path.Combine(songs, "out.mp3"), Path.Combine(songs, "out.ogg")));
+            await deezerClient.DownloadLyrics(songID, Path.Combine(songs, "lyrics.lrc"));
+        });
 
-    // private async Task DownloadSongandLyrics(uint songID)
-    // {
-    //     var deezerClient = new DeezerAPI(Config.DeezerARL);
-    //     var info =  await deezerClient.GetInfo(songID);
-    //     await deezerClient.DownloadSong(songID);
-    //     var lrclib = new LrcLibLyrics();
-    //     await lrclib.DownloadLyrics(info[3].ToString() ,info[5].ToString(),info[6].ToString(),info[4].ToString());
-    // }
-    // private ReferenceHub SpawnBot(string name)
-    // {
-    //     var newPlayer = Object.Instantiate(NetworkManager.singleton.playerPrefab);
-    //     var fakeconnection = new FakeNetworkConnection(0);
-    //     var hub = newPlayer.GetComponent<ReferenceHub>();
-    //     NetworkServer.AddPlayerForConnection(fakeconnection, newPlayer);
-    //     hub.authManager.InstanceMode = ClientInstanceMode.Host;
-    //
-    //     try
-    //     {
-    //         hub.nicknameSync.SetNick(name);
-    //     }
-    //     catch (Exception)
-    //     {
-    //     }
-    //
-    //     return hub;
-    // }
+        while (!task.IsCompleted)
+        {
+            yield return Timing.WaitForOneFrame;
+        }
 
+        if (task.IsFaulted)
+        {
+            Log.Error("Song download and conversion failed: " + task.Exception);
+        }
+        else
+        {
+            Log.Info("Song download and conversion completed successfully.");
+        }
+    }
 }
-
-
-
 }

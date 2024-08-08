@@ -1,6 +1,6 @@
 using System;
 using CommandSystem;
-using PluginAPI.Core;
+using Exiled.API.Features;
 
 namespace SCPKaraoke.Commands
 {
@@ -17,7 +17,7 @@ namespace SCPKaraoke.Commands
         {
             try
             {
-                KaraokeSync.Current.Participators.RemoveAll(player => player.Equals(Player.Get(sender).PlayerId));
+                KaraokeSync.Current.Participators.RemoveAll(player => player.Equals(Player.Get(sender).Id));
                 response = "you opted out of karaoke";
             }
             catch (NullReferenceException)

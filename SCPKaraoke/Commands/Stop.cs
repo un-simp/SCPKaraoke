@@ -23,7 +23,7 @@ namespace SCPKaraoke.Commands
                 KaraokeSync karaoke = KaraokeSync.Current;
                 karaoke.EndSong();
             }
-            catch (NullReferenceException e)
+            catch (NullReferenceException)
             {
                 response = "There is no karaoke playing right now (according to me at least :shrug:)";
                 return false;
